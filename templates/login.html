@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Log Analisis & Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="icon" href="{{ url_for('static', filename='favicon-32x32.png') }}" type="image/png"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="login-page-body">
+    <div class="login-page-flash-container">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="error-flash">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>  
+    <main class="login-container">
+        <section class="login-form-container">
+            <a href="{{ url_for('dashboard') }}" class="login-logo-link">
+                <img src="{{ url_for('static', filename='Logo_IFG-removebg-preview.png') }}" alt="Logo IFG" class="login-logo">
+            </a>
+            
+            <h1 class="login-welcome-text">Selamat Datang</h1>
+            <p class="login-instruction">Silakan login menggunakan username dan password yang sesuai.</p>
+
+            <form class="login-form" method="POST">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Masukkan username Anda" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Masukkan password Anda" required>
+                </div>
+                <button type="submit" class="login-btn">Login</button>
+            </form>
+        </section>
+
+        <aside class="login-illustration">
+            <img src="static/Ilustrasi 1.jpg" alt="Illustrasi Layanan" class="illustration-image">
+        </aside>
+    </main>
+</body>
+</html>

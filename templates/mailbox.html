@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mailbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="icon" href="{{ url_for('static', filename='favicon-32x32.png') }}" type="image/png"/>
+    <style>
+        /* CSS KHUSUS UNTUK MEMPERLEBAR MODAL COMPOSE */
+        #compose-modal .modal-content {
+            width: 800px !important; /* Ubah 800px jika ingin lebih lebar lagi */
+            max-width: 90vw; /* Agar tetap responsive di layar kecil */
+        }
+        #compose-form {
+            display: flex;
+            flex-direction: column;
+            height: 100%; /* Buat form mengisi tinggi modal */
+        }
+
+        #compose-form #body-textarea {
+            flex-grow: 1; /* <<<< INI ADALAH RAHASI UTAMANYA */
+            min-height: 150px; /* Tinggi minimum */
+            resize: none; /* Cegah user resize manual */
+            box-sizing: border-box; /* Pastikan padding tidak menambah ukuran */
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <p>AI dapat memberikan kesalahan, Harap periksa kembali hasil yang diberikan oleh AI</p>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-logo">
+            <a href="{{ url_for('dashboard') }}">
+                <img src="{{ url_for('static', filename='Logo_IFG-removebg-preview.png') }}" alt="Logo">
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('dashboard') }}">Home</a></li> 
+            <li><a href="{{ url_for('dashboard') }}#folder-management">Folder</a></li> 
+            <li><a href="{{ url_for('dashboard') }}#fitur">Fitur yang Tersedia</a></li> 
+            <li><a href="{{ url_for('log_analysis_page') }}">Log Analisis</a></li>
+            <li><a href="{{ url_for('mailbox_page') }}" style="color: var(--primary); font-weight: 700;">Mailbox</a></li>
+                <span id="mailbox-unread-count" class="notification-count hidden">0</span> 
+        </ul>
+        
+        <div class="nav-extra">
+            <span class="nav-user-greeting">Halo, {{ username }} ({{ label }})</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+        </div>
+    </nav>
+
+    <main class="mailbox-main">
+        <section class="mailbox-container">
+            <!-- Panel Kiri: Folder List -->
+            <aside class="mailbox-folders">
+                <ul>
+                    <li id="inbox-tab" class="folder-item active" onclick="showMailboxType('inbox')">
+                        Inbox
+                    </li>
+                    <li id="sent-tab" class="folder-item" onclick="showMailboxType('sent')">
+                        Sent Items
+                    </li>
+                </ul>
+                <button id="compose-btn" class="start-btn" style="width: 90%; margin-top: 1rem;">Compose</button>
+            </aside>
+
+            <!-- Panel Tengah: Message List -->
+            <section class="mailbox-list">
+                <div class="list-header">
+                    <h3 id="list-title">Inbox</h3>
+                </div>
+                <div id="message-list-container">
+                    <table id="message-list-table">
+                        <thead>
+                            <tr>
+                                <th id="delete-action-header" class="hidden">Aksi</th>
+                                <th id="sender-recipient-header">Pengirim</th>
+                                <th>Subjek</th>
+                                <th>Tanggal</th>
+                                <th>Status</th> <!-- TAMBAHKAN INI -->
+                            </tr>
+                        </thead>
+                        <tbody id="message-list-body">
+                            <!-- Akan diisi oleh JavaScript -->
+                        </tbody>
+                    </table>
+                    <div id="empty-list-message" class="hidden" style="text-align: center; padding: 2rem; color: var(--text-light);">
+                        Tidak ada pesan.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel Kanan: Message Preview -->
+            <aside class="mailbox-preview">
+                <div id="preview-content">
+                    <p style="font-size: 1.2rem; color: var(--text-light);">Select an item to read</p>
+                    <p style="font-size: 1rem; color: var(--text-light);">Nothing is selected</p>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <!-- Modal Compose -->
+    <div id="compose-modal" class="modal hidden">
+        <!-- Perhatikan: tidak ada style="max-width" di sini, lebar diatur oleh JS -->
+        <div class="modal-content">
+            <span class="modal-close-btn" id="compose-modal-close-btn">&times;</span>
+            <h3>Compose New Message</h3>
+            <form id="compose-form" enctype="multipart/form-data">
+                <label for="recipient-select">Kepada:</label>
+                <select id="recipient-select" name="recipient_id" required>
+                    <option value="">-- Pilih Penerima --</option>
+                </select>
+
+                <label for="subject-input">Subjek:</label>
+                <input type="text" id="subject-input" name="subject" required>
+
+                <label for="body-textarea">Pesan:</label>
+                <textarea id="body-textarea" name="body" rows="10"></textarea>
+
+                <label for="attachment-input">Lampiran:</label>
+                <input type="file" id="attachment-input" name="attachment">
+
+                <button type="submit" class="login-btn" style="margin-top: 1rem;">Kirim</button>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <p>2025 AI Proofreading Dashboard | Departemen Center of Excellence, Satuan Kerja Audit Internal | Indonesia Financial Group</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='mailbox.js') }}"></script>
+
+    <div id="custom-message-modal" class="modal hidden">
+        <div class="modal-content custom-message-box">
+            <span class="modal-close-btn" id="custom-message-close-btn">&times;</span>
+            <h3 id="custom-message-title" style="border-bottom: none; margin-bottom: 0;">Pesan</h3>
+            
+            <div id="custom-message-details" style="text-align: left; margin: 1rem 0; display: none;">
+                <!-- Detail akan dimuat di sini oleh JavaScript -->
+            </div>
+
+            <p id="custom-message-text" style="text-align: center; margin-top: 1rem; margin-bottom: 2rem;"></p>
+            
+            <button id="custom-message-ok-btn" class="login-btn full-width" style="margin-top: 0;">OK</button>
+        </div>
+    </div>
+    <div id="custom-confirm-modal" class="modal hidden">
+        <div class="modal-content custom-confirm-box">
+            <h3 id="custom-confirm-title" style="border-bottom: none; margin-bottom: 0;">Konfirmasi</h3>
+            <p id="custom-confirm-text" style="text-align: center; margin-top: 1rem; margin-bottom: 2rem; font-weight: 500;"></p>
+            <div class="confirm-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <button id="custom-confirm-ok-btn" class="login-btn" style="flex: 1; background-color: var(--danger);">Ya, Hapus</button>
+                <button id="custom-confirm-cancel-btn" class="login-btn" style="flex: 1; background-color: #6c757d;">Batal</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

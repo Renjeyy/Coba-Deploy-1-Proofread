@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Proofreading Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" type="image/png"/>
+
+    <script>
+    function navGoToHome() {
+        window.location.hash = 'home';
+        showPage('home');
+    }
+    
+    function navGoToFolder() {
+        window.location.hash = 'folder-management';
+        showPage('folder-management');
+        if (typeof loadUserFolders === "function") {
+            loadUserFolders();
+        }
+    }
+
+    function navGoToFitur() {
+        window.location.hash = 'fitur';
+        showPage('fitur');
+    }
+
+    function goToFeature(featureId) {
+        window.location.hash = featureId;
+        showPage(featureId);
+    }
+
+    // --- FUNGSI UTAMA UNTUK MENAMPILKAN HALAMAN (VERSI PERBAIKAN) ---
+    function showPage(pageId) {
+        // 1. Sembunyikan semua bagian utama
+        const sectionsToHide = [
+            "hero-section",
+            "dashboard-widgets-section", // TAMBAHKAN INI
+            "features-page-container", 
+            "dropdown-section",
+            "folder-management-section"
+        ];
+        sectionsToHide.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.classList.add("hidden");
+        });
+        document.querySelectorAll(".feature-section").forEach(sec => sec.classList.add("hidden"));
+
+        // 2. Tampilkan bagian yang relevan menggunakan switch
+        const featureSelect = document.getElementById("feature-select");
+        const folderHistoryDetail = document.getElementById("folder-history-detail");
+
+        switch (pageId) {
+            case 'home':
+            case '':
+                document.getElementById("hero-section")?.classList.remove("hidden");
+                document.getElementById("dashboard-widgets-section")?.classList.remove("hidden"); // TAMPILKAN WIDGET
+                if (featureSelect) featureSelect.value = "";
+                
+                // Panggil fungsi untuk memuat widget
+                if (typeof fetchAndRenderDashboardWidgets === "function") {
+                    fetchAndRenderDashboardWidgets();
+                }
+                break;
+
+            case 'folder-management':
+                document.getElementById("folder-management-section")?.classList.remove("hidden");
+                if (folderHistoryDetail) folderHistoryDetail.classList.add("hidden");
+                if (typeof loadUserFolders === "function") {
+                    loadUserFolders();
+                }
+                break;
+
+            case 'fitur':
+                document.getElementById("features-page-container")?.classList.remove("hidden");
+                document.querySelector("#features-page-container .section-title")?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (featureSelect) featureSelect.value = "";
+                break;
+
+            case 'proofreading':
+            case 'compare':
+            case 'coherence':
+            case 'restructure':
+                document.getElementById("features-page-container")?.classList.remove("hidden");
+                document.getElementById("dropdown-section")?.classList.remove("hidden");
+                document.getElementById(pageId)?.classList.remove("hidden");
+                if (featureSelect) featureSelect.value = pageId;
+                if (typeof checkSessionStorage === "function") {
+                    checkSessionStorage(pageId);
+                }
+                break;
+        }
+    }
+
+    function showFeature() {
+        const selection = document.getElementById("feature-select").value;
+        if (selection) {
+            window.location.hash = selection;
+            showPage(selection);
+        } else {
+            window.location.hash = 'fitur';
+            showPage('fitur');
+        }
+    }
+
+    function handlePageLoad() {
+        const currentPage = window.location.hash.replace('#', '');
+        showPage(currentPage || 'home');
+    }
+    window.onload = handlePageLoad;
+    </script>
+
+</head>
+<body data-user-id="{{ current_user_id }}">
+    <div class="top-bar">
+        <p>AI dapat memberikan kesalahan, Harap periksa kembali hasil yang diberikan oleh AI</p>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-logo">
+            <a href="#" onclick="navGoToHome(); return false;">
+                <img src="{{ url_for('static', filename='Logo_IFG-removebg-preview.png') }}" alt="Logo">
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" onclick="navGoToHome(); return false;">Home</a></li> 
+            <li><a href="#" onclick="navGoToFolder(); return false;">Folder</a></li> 
+            <li><a href="#" onclick="navGoToFitur(); return false;">Fitur yang Tersedia</a></li> 
+            <li><a href="{{ url_for('log_analysis_page') }}">Log Analisis</a></li> 
+            <li><a href="{{ url_for('mailbox_page') }}">Mailbox</a></li>
+                 <span id="mailbox-unread-count" class="notification-count hidden">0</span> 
+        </ul>
+        
+        <div class="nav-extra">
+            <span class="nav-user-greeting">Halo, {{ username }} ({{ label }})</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+        </div>
+    </nav>
+
+    <main>
+        <div id="global-error" class="error-box hidden"></div>
+        <h1 style="color:red; text-align: center; font-size: 2rem; font-weight: 600;">
+            Beta Version : Masih dalam Tahap Pengembangan</h1>
+        
+        <section id="folder-management-section" class="hero-section folder-management-section hidden">
+            <div class="folder-header">
+                <h2>Folder Saya</h2>
+                <button id="create-folder-btn" class="start-btn">Buat Folder Baru</button>
+            </div>
+            
+            <div id="folder-grid" class="feature-grid folder-list">
+                {% if folders %}
+                    {% for folder in folders %} <div class="feature-card folder-card" data-name="{{ folder.name }}">
+                            <div class="workspace-card-content">
+                                <div class="folder-card-info">
+                                    <h3>{{ folder.name }}</h3>
+                                    {% if not folder.is_owner %}
+                                        <span class="folder-owner-label">(Di-share oleh: {{ folder.owner_name }})</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="folder-actions-center">
+                                    {% if folder.is_owner %}
+                                        <button class="folder-share-btn-text" onclick="openShareModal('{{ folder.name }}', event)">
+                                            Share Folder
+                                        </button>
+                                        <button class="folder-delete-btn-text" onclick="deleteFolder('{{ folder.name }}', event)">
+                                            Delete Folder
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                
+                                <p>Klik untuk melihat riwayat analisis.</p>
+                            </div>
+                            <button class="feature-btn history-btn" onclick="viewFolderHistory('{{folder.name}}', {{folder.owner_id}})"> Lihat Isi Folder
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-folder" style="grid-column: 1 / -1;">Belum ada folder. Silakan buat folder untuk mulai menyimpan hasil.</p>
+                {% endif %}
+            </div>
+
+            <div id="folder-history-detail" class="feature-section hidden" style="margin-top: 2rem; text-align: left;">
+                <div id="history-result-view" class="feature-section hidden" style="margin-top: 2rem; background-color: #fff; border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-light);">
+                </div>
+            </div>
+        </section>
+        <section id="hero-section" class="hero-section">
+            <div class="hero-content">
+                <h1>Selamat Datang di Website Proofreader IFG</h1>
+                <p class="subtitle">Divisi Satuan Kerja Audit Internal</p>
+                <p>Platform ini membantu Anda dalam proofreading otomatis, dan analisis koherensi menggunakan AI berbasis Gemini.</p>
+                <button class="start-btn" onclick="navGoToFitur()">Klik disini untuk diarahkan ke Fitur Proofread</button>
+            </div>
+            <div class="hero-image">
+                <img src="{{ url_for('static', filename='Proofread GIF.gif') }}" alt="Hero Image">
+                <p class="image-caption">Source : Qais Sarhan (Dribble)</p>
+            </div>
+        </section>
+
+        <!-- TAMBAHKAN SECTION INI SETELAH HERO SECTION -->
+        <section id="dashboard-widgets-section" class="dashboard-widgets hidden">
+            <!-- Kolom Kiri: Kalender Tugas -->
+            <div class="widget-container calendar-container">
+                <h2>Kalender Tugas Aktif</h2>
+                <div id="task-calendar">
+                    <!-- Konten kalender akan digenerate oleh JavaScript -->
+                </div>
+            </div>
+
+            <!-- Kolom Kanan: Daftar Reminder -->
+            <div class="widget-container reminder-container">
+                <h2>Daftar Reminder</h2>
+                
+                <div class="reminder-group">
+                    <h3 class="reminder-title-on-progress">On Progress</h3>
+                    <ul id="on-progress-list">
+                        <li class="no-reminder">Memuat data...</li>
+                    </ul>
+                </div>
+
+                <div class="reminder-group">
+                    <h3 class="reminder-title-overdue">Overdue</h3>
+                    <ul id="overdue-list">
+                        <li class="no-reminder">Memuat data...</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="features-page-container" class="hidden">
+            <h2 class="section-title">Fitur yang Tersedia</h2>
+            <p class="grid-intro-text">
+                Kami menyediakan 4 layanan berikut, Anda dipersilakan untuk memilih fitur yang ingin Anda gunakan.
+            </p>
+            <section id="feature-grid" class="feature-grid">
+                <div class="feature-card">
+                    <h3>Proofreading Otomatis</h3>
+                    <p>Perbaiki tata bahasa, ejaan, dan gaya akademik dokumen Anda secara otomatis.</p>
+                    <button class="feature-btn" onclick="document.getElementById('feature-select').value='proofreading'; showFeature();">Mulai Sekarang</button>
+                </div>
+                <div class="feature-card">
+                    <h3>Banding Dokumen</h3>
+                    <p>Bandingkan dua versi dokumen Anda secara berdampingan untuk melihat perubahan.</p>
+                    <button class="feature-btn" onclick="document.getElementById('feature-select').value='compare'; showFeature();">Mulai Sekarang</button>
+                </div>
+                <div class="feature-card">
+                    <h3>Rewording Kalimat</h3>
+                    <p>Periksa kesesuaian kalimat berdasarkan paragraf yang sedang dibahas...</p>
+                    <button class="feature-btn" onclick="document.getElementById('feature-select').value='coherence'; showFeature();">Mulai Sekarang</button>
+                </div>
+                <div class="feature-card">
+                    <h3>Restrukturisasi Teks</h3>
+                    <p>AI akan mencoba untuk membantu memberi saran dalam menyusun ulang paragraf...</p>
+                    <button class="feature-btn" onclick="document.getElementById('feature-select').value='restructure'; showFeature();">Mulai Sekarang</button>
+                </div>
+            </section>
+        </section>
+
+        <section id="dropdown-section" class="dropdown-section hidden">
+            <h3>Pilih Fitur yang Sedang Aktif</h3>
+            <select id="feature-select" onchange="showFeature()">
+                <option value="">-- Pilih Fitur --</option>
+                <option value="proofreading">Proofreading Otomatis</option>
+                <option value="compare">Perbandingan Dokumen</option>
+                <option value="coherence">Rewording Kalimat</option>
+                <option value="restructure">Restrukturisasi Koherensi</option>
+            </select>
+        </section>
+
+        <section id="proofreading" class="feature-section hidden">
+            <h3>Proofreading Otomatis</h3>
+            <p>Unggah dokumen Anda dalam format .docx dan AI akan membantu Anda untuk memperbaiki tata bahasa, ejaan, serta gaya akademis dokumen Anda secara otomatis, sesuai dengan standar KBBI dan PUEBI.</p>
+            <div class="upload-box">
+                <input type="file" id="proofread-file" accept=".docx, .pdf" />
+                <button id="proofread-analyze-btn" class="analyze-btn">Mulai Analisis</button>
+            </div>
+            <div id="proofread-loading" class="loading hidden"><div class="sender"></div> Dokumen Anda sedang dianalisis menggunakan AI... Mohon ditunggu</div>
+            <div id="proofread-results-container" class="results-container hidden">
+                <h4>Hasil Analisis</h4>
+                <div id="proofread-save-to-folder-bar" class="results-action-bar">
+                    <button id="proofread-save-btn" class="save-btn hidden">Simpan ke Folder</button>
+                </div>
+                <div class="results-warning-box"><h4>Warning</h4><p>AI dapat memberikan kesalahan. Harap periksa kembali hasil yang diberikan oleh AI dengan teliti baik sebelum Anda unduh maupun setelah diunduh.</p></div>
+                <div id="proofread-results-table"></div>
+                <div id="proofread-download-buttons" class="dropdown-section">
+                    <button id="proofread-download-revised-btn" class="download-btn">Unduh Revisi (.docx)</button>
+                    <button id="proofread-download-highlighted-btn" class="download-btn">Unduh Highlight (.docx)</button>
+                    <button id="proofread-download-zip-btn" class="download-btn">Unduh Semua (.zip)</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="compare" class="feature-section hidden">
+            <h3>Perbandingan Dokumen</h3>
+            <p>Bandingkan dua versi dokumen (.docx) Anda secara berdampingan untuk melihat perubahan.</p>
+
+            <div class="compare-mode-toggle">
+                <label for="advanced-compare-toggle">Mode Analisis Lanjutan (Jelaskan Perbedaan Konteks)</label>
+                <label class="switch">
+                    <input type="checkbox" id="advanced-compare-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+            <div class="upload-box split">
+                <div><label for="compare-file1">Dokumen Asli:</label><input type="file" id="compare-file1" accept=".docx, .pdf" /></div>
+                <div><label for="compare-file2">Dokumen lainnya:</label><input type="file" id="compare-file2" accept=".docx, .pdf" /></div>
+            </div>
+            <button id="compare-analyze-btn" class="analyze-btn full-width">Mulai Perbandingan</button>
+            <div id="compare-loading" class="loading hidden">
+                <div class="spinner"></div> 
+                <p>Dokumen Anda sedang dianalisis... </p>
+                <p style="font-size: 0.9em; color: #666;">Untuk dokumen panjang dan mode lanjutan, proses ini bisa memakan waktu beberapa menit. Mohon tetap di halaman ini.</p>
+            </div>
+            <div id="compare-results-container" class="results-container hidden">
+                <h4>Hasil Perbandingan</h4>
+                <div id="compare-save-to-folder-bar" class="results-action-bar">
+                    <button id="compare-save-btn" class="save-btn hidden">Simpan ke Folder</button>
+                </div>
+                <div id="compare-results-table"></div>
+                <div id="compare-download-buttons" class="dropdown-section">
+                    <button id="compare-download-btn" class="download-btn">Unduh Tabel Perbandingan (.docx)</button>
+                </div>
+                <div class="results-warning-box"><h4>Warning</h4><p>AI dapat memberikan kesalahan. Harap periksa kembali hasil yang diberikan oleh AI dengan teliti baik sebelum Anda unduh maupun setelah diunduh.</p></div>
+            </div>
+        </section>
+
+        <section id="coherence" class="feature-section hidden">
+            <h3>Analisis Koherensi</h3>
+            <p>AI akan memeriksa kesesuaian ide antar paragraf dan transisi logis dalam teks Anda.</p>
+            <div class="upload-box">
+                <input type="file" id="coherence-file" accept=".docx, .pdf" />
+                <button id="coherence-analyze-btn" class="analyze-btn">Mulai Analisis Koherensi</button>
+            </div>
+            <div id="coherence-loading" class="loading hidden"><div class="spinner"></div> Dokumen Anda sedang dianalisis menggunakan AI... Mohon ditunggu</div>
+            <div id="coherence-results-container" class="results-container hidden">
+                <h4>Hasil Analisis Koherensi</h4>
+                <div id="coherence-save-to-folder-bar" class="results-action-bar">
+                    <button id="coherence-save-btn" class="save-btn hidden">Simpan ke Folder</button>
+                </div>
+                <div id="coherence-results-table"></div>
+                <div class="results-warning-box"><h4>Warning</h4><p>AI dapat memberikan kesalahan. Harap periksa kembali hasil yang diberikan oleh AI dengan teliti baik sebelum Anda unduh maupun setelah diunduh.</p></div>
+            </div>
+        </section>
+
+        <section id="restructure" class="feature-section hidden">
+            <h3>Restrukturisasi Koherensi</h3>
+            <p>AI akan membantu menyusun ulang paragraf agar lebih logis dan mudah diikuti pembaca.</p>
+            <div class="upload-box">
+                <input type="file" id="restructure-file" accept=".docx, .pdf" />
+                <button id="restructure-analyze-btn" class="analyze-btn">Mulai Analisis Restrukturisasi</button>
+            </div>
+            <div id="restructure-loading" class="loading hidden"><div class="server-error" style="color: var(--primary); font-weight: bold;">429 You exceeded your current quota, please check your plan and billing details.</div>
+            <div class="spinner"></div> Dokumen Anda sedang dianalisis menggunakan AI... Mohon ditunggu</div>
+            <div id="restructure-results-container" class="results-container hidden">
+                <h4>Saran Restrukturisasi</h4>
+                <div id="restructure-save-to-folder-bar" class="results-action-bar">
+                    <button id="restructure-save-btn" class="save-btn hidden">Simpan ke Folder</button>
+                <div id="restructure-results-table"></div>
+                <div id="restructure-download-buttons" class="download-buttons">
+                    <button id="restructure-download-btn" class="download-btn">Unduh Dokumen dengan Highlight (.docx)</button>
+                </div>
+                <div class="results-warning-box"><h4>Warning</h4><p>AI dapat memberikan kesalahan. Harap periksa kembali hasil yang diberikan oleh AI dengan teliti baik sebelum Anda unduh maupun setelah diunduh.</p></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>2025 AI Proofreading Dashboard | Departemen Center of Excellence, Satuan Kerja Audit Internal | Indonesia Financial Group</p>
+    </footer>
+
+    <div id="custom-message-modal" class="modal hidden">
+        <div class="modal-content custom-message-box">
+            <span class="modal-close-btn" id="custom-message-close-btn">&times;</span>
+            <h3 id="custom-message-title" style="border-bottom: none; margin-bottom: 0;">Pesan</h3>
+            
+            <!-- TAMBAHKAN DIV INI UNTUK MENAMPUNG DETAIL -->
+            <div id="custom-message-details" style="text-align: left; margin: 1rem 0; display: none;">
+                <!-- Detail akan dimuat di sini oleh JavaScript -->
+            </div>
+
+            <!-- Ini untuk pesan sederhana (jika tidak ada detail) -->
+            <p id="custom-message-text" style="text-align: center; margin-top: 1rem; margin-bottom: 2rem;"></p>
+            
+            <button id="custom-message-ok-btn" class="login-btn full-width" style="margin-top: 0;">OK</button>
+        </div>
+    </div>
+
+    <div id="custom-confirm-modal" class="modal hidden">
+        <div class="modal-content custom-confirm-box">
+            <h3 id="custom-confirm-title" style="border-bottom: none; margin-bottom: 0;">Konfirmasi</h3>
+            <p id="custom-confirm-text" style="text-align: center; margin-top: 1rem; margin-bottom: 2rem; font-weight: 500;"></p>
+            <div class="confirm-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <button id="custom-confirm-ok-btn" class="login-btn" style="flex: 1; background-color: var(--danger);">Ya, Hapus</button>
+                <button id="custom-confirm-cancel-btn" class="login-btn" style="flex: 1; background-color: #6c757d;">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="save-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close-btn" id="save-modal-close-btn">&times;</span>
+            <h3>Simpan Hasil ke Folder</h3>
+            <p>Simpan hasil analisis dari fitur <strong id="save-modal-feature-name"></strong> ke dalam folder yang Anda pilih.</p>
+            
+            <div id="save-modal-loading" class="loading hidden" style="text-align: center; margin: 1rem 0;">
+                <div class="spinner"></div> Memuat daftar folder...
+            </div>
+            
+            <div id="save-modal-error" class="error-flash hidden" style="margin: 1rem 0;"></div>
+
+            <label for="folder-select-dropdown">Pilih Folder Tujuan:</label>
+            <select id="folder-select-dropdown">
+                <!-- Daftar folder akan dimuat di sini oleh JavaScript -->
+            </select>
+            
+            <div class="modal-actions">
+                <button id="confirm-save-btn" class="login-btn">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="folder-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close-btn" id="folder-modal-close-btn">&times;</span>
+            <h3>Buat Folder Baru</h3>
+            <p>Masukkan nama untuk folder baru Anda.</p>
+            
+            <!-- ID form ini "create-folder-form" dipanggil oleh script.js -->
+            <form id="create-folder-form">
+                <div class="form-group" style="text-align: left; margin-bottom: 1.5rem;">
+                    <label for="folder-name-input">Nama Folder</label>
+                    <input type="text" id="folder-name-input" name="name" required style="width: 100%; box-sizing: border-box;">
+                </div>
+                
+                <!-- ID ini "folder-modal-loading" dipanggil oleh script.js -->
+                <div id="folder-modal-loading" class="loading hidden" style="text-align: center; margin: 1rem 0;">
+                    <div class="spinner"></div> Membuat folder...
+                </div>
+                
+                <!-- ID ini "folder-modal-error" dipanggil oleh script.js -->
+                <div id="folder-modal-error" class="error-flash hidden" style="margin: 1rem 0;"></div>
+
+                <div class="modal-actions">
+                    <!-- ID ini "folder-modal-submit-btn" dipanggil oleh script.js -->
+                    <button type="submit" id="folder-modal-submit-btn" class="login-btn" style="width: 100%;">Buat Folder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================================================= -->
+<!-- ===           MODAL SHARE FOLDER                    === -->
+<!-- ================================================= -->
+<div id="share-modal" class="modal hidden">
+    <div class="modal-content">
+        <span class="modal-close-btn" id="share-modal-close-btn">&times;</span>
+        <h3>Share Folder: <span id="share-modal-folder-name"></span></h3>
+        <p>Pilih pengguna yang ingin Anda beri akses ke folder ini.</p>
+        
+        <div id="share-modal-loading" class="loading hidden" style="text-align: center; margin: 1rem 0;">
+            <div class="spinner"></div> Memuat daftar pengguna...
+        </div>
+
+        <div id="share-modal-error" class="error-flash hidden" style="margin: 1rem 0;"></div>
+
+        <div class="results-table-wrapper" style="max-height: 300px; overflow-y: auto; margin-top: 1rem;">
+            <table class="share-user-table">
+                <thead>
+                    <tr>
+                        <th>Pilih</th>
+                        <th>Username</th>
+                        <th>Label</th>
+                    </tr>
+                </thead>
+                <tbody id="share-user-table-body">
+                    <!-- Daftar pengguna akan dimuat di sini oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="modal-actions">
+            <button id="confirm-share-btn" class="login-btn">Share</button>
+        </div>
+    </div>
+</div>
+
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+</body>
+</html>

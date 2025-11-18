@@ -1,0 +1,33 @@
+# Python
+# Folder untuk file bytecode yang dihasilkan otomatis
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Folder untuk lingkungan virtual (venv)
+env/
+venv/
+.venv/
+
+# File log
+*.log
+
+# Environment Variables - RAHASIA, JANGAN MASUKKAN KE GITHUB!
+.env
+
+# IDE / Editor
+# Konfigurasi untuk VS Code
+.vscode/
+# Konfigurasi untuk PyCharm
+.idea/
+
+# Sistem Operasi
+# File yang dibuat macOS
+.DS_Store
+# File yang dibuat Windows
+Thumbs.db
+
+# Folder upload (jika isinya sementara dan tidak perlu di-tracking)
+# Hapus tanda # di bawah jika folder 'static/uploads' tidak perlu di-track
+# static/uploads/

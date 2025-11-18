@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Log Analisis & Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="icon" href="{{ url_for('static', filename='favicon-32x32.png') }}" type="image/png"/>
+</head>
+<body>
+    <div class="top-bar">
+        <p>AI dapat memberikan kesalahan, Harap periksa kembali hasil yang diberikan oleh AI</p>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-logo">
+            <a href="{{ url_for('dashboard') }}">
+                <img src="{{ url_for('static', filename='Logo_IFG-removebg-preview.png') }}" alt="Logo">
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('dashboard') }}">Home</a></li> 
+            <li><a href="{{ url_for('dashboard') }}#folder-management">Folder</a></li> 
+            <li><a href="{{ url_for('dashboard') }}#fitur">Fitur yang Tersedia</a></li> 
+            <li><a href="{{ url_for('log_analysis_page') }}" style="color: var(--primary); font-weight: 700;">Log Analisis</a></li>
+            <li><a href="{{ url_for('mailbox_page') }}">Mailbox</a></li>
+                <span id="mailbox-unread-count" class="notification-count hidden">0</span> 
+        </ul>
+        
+        <div class="nav-extra">
+            <span class="nav-user-greeting">Halo, {{ username }} ({{ label }})</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+        </div>
+    </nav>
+
+    <main>
+        <section class="feature-section">
+            <h1 style="text-align: center;">Log Analisis & Tracker Tugas</h1>            
+            <button id="add-task-btn" class="start-btn" style="margin-bottom: 2rem;">Add Task</button>
+            <div id="log-loading" class="loading hidden"><div class="spinner"></div> Memuat data log...</div>
+            <div id="log-error" class="error-box hidden"></div>
+
+            <div class="results-table-wrapper">
+                <table id="log-table">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Nama Dokumen</th>
+                            <th>Fitur</th>
+                            <th>Tanggal Dikerjakan</th>
+                            <th>Deadline</th> <!-- <<<< KOLOM BARU -->
+                            <th>Tanggal Selesai</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-table-body">
+                        <!-- Data akan dimuat oleh JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>2025 AI Proofreading Dashboard | Departemen Center of Excellence, Satuan Kerja Audit Internal | Indonesia Financial Group</p>
+    </footer>
+
+    <!-- Modal untuk Add/Edit Task -->
+    <div id="task-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close-btn" id="task-modal-close-btn">&times;</span>
+            <h3 id="task-modal-title">Tambah Tugas Baru</h3>
+            <form id="task-form">
+                <!-- Hidden input untuk menyimpan ID log saat edit -->
+                <input type="hidden" id="task-log-id">
+
+                <label for="task-filename-input">Nama Dokumen *</label>
+                <input type="text" id="task-filename-input">
+
+                <label for="task-feature-select">Fitur</label>
+                <select id="task-feature-select">
+                    <option value="">-- Pilih Fitur --</option>
+                    <option value="proofreading">Proofreading Otomatis</option>
+                    <option value="compare">Perbandingan Dokumen</option>
+                    <option value="coherence">Analisis Koherensi</option>
+                    <option value="restructure">Restrukturisasi Koherensi</option>
+                </select>
+
+                <label for="task-start-time-input">Tanggal Mulai</label>
+                <input type="date" id="task-start-time-input" name="start_time">
+
+                <label for="task-deadline-input">Deadline</label>
+                <input type="date" id="task-deadline-input" name="deadline">
+
+                <label for="task-end-time-input">Tanggal Selesai</label>
+                <input type="date" id="task-end-time-input" name="end_time">
+
+                <button type="submit" class="login-btn" style="margin-top: 1rem;">Tambah Tugas</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='log_analysis.js') }}"></script>
+
+    <div id="custom-message-modal" class="modal hidden">
+        <div class="modal-content custom-message-box">
+            <span class="modal-close-btn" id="custom-message-close-btn">&times;</span>
+            <h3 id="custom-message-title" style="border-bottom: none; margin-bottom: 0;">Pesan</h3>
+            <div id="custom-message-details" style="text-align: left; margin: 1rem 0; display: none;">
+            </div>
+            <p id="custom-message-text" style="text-align: center; margin-top: 1rem; margin-bottom: 2rem;"></p>
+            <button id="custom-message-ok-btn" class="login-btn full-width" style="margin-top: 0;">OK</button>
+        </div>
+    </div>
+    <div id="custom-confirm-modal" class="modal hidden">
+        <div class="modal-content custom-confirm-box">
+            <h3 id="custom-confirm-title" style="border-bottom: none; margin-bottom: 0;">Konfirmasi</h3>
+            <p id="custom-confirm-text" style="text-align: center; margin-top: 1rem; margin-bottom: 2rem; font-weight: 500;"></p>
+            <div class="confirm-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <button id="custom-confirm-ok-btn" class="login-btn" style="flex: 1; background-color: var(--danger);">Ya, Hapus</button>
+                <button id="custom-confirm-cancel-btn" class="login-btn" style="flex: 1; background-color: #6c757d;">Batal</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
